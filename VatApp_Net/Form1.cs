@@ -26,17 +26,47 @@ namespace VatApp_Net
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            // On attend que l'utilisateur clique sur Se Connecter
+            lblStatus.Text = "Veuillez saisir le serveur SQL (ex: .\\SAGE100) et cliquer sur Se Connecter.";
+        }
+
+        private void btnConnect_Click(object sender, EventArgs e)
+        {
             try
             {
-                scanner = new SageScanner(@"DESKTOP-GA5VJ5I\SAGE100", "BIJOU");
+                lblStatus.Text = "Connexion au serveur...";
+                lblStatus.ForeColor = Color.Blue;
+                this.Cursor = Cursors.WaitCursor;
+
+                string server = txtServer.Text.Trim();
+                // On utilise une base temporaire 'master' juste pour lister les autres bases
+                scanner = new SageScanner(server, "master");
+                
                 var dbs = scanner.GetDatabases();
                 cmbSoc.Items.Clear();
                 foreach (var db in dbs) cmbSoc.Items.Add(db);
-                if (cmbSoc.Items.Count > 0) cmbSoc.SelectedIndex = 0;
+                
+                if (cmbSoc.Items.Count > 0)
+                {
+                    cmbSoc.SelectedIndex = 0;
+                    lblStatus.Text = $"{cmbSoc.Items.Count} bases trouvées sur le serveur.";
+                    lblStatus.ForeColor = Color.Green;
+                }
+                else
+                {
+                    lblStatus.Text = "Aucune base trouvée sur ce serveur.";
+                    lblStatus.ForeColor = Color.Orange;
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erreur chargement bases : " + ex.Message);
+                lblStatus.Text = "Erreur connexion : " + ex.Message;
+                lblStatus.ForeColor = Color.Red;
+                MessageBox.Show("Erreur de connexion au serveur SQL :\n" + ex.Message, "Erreur SQL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                this.Cursor = Cursors.Default;
             }
         }
 
@@ -89,7 +119,8 @@ namespace VatApp_Net
                 }
 
                 string db = cmbSoc.SelectedItem.ToString();
-                var taskScanner = new SageScanner(@"DESKTOP-GA5VJ5I\SAGE100", db);
+                string server = txtServer.Text.Trim();
+                var taskScanner = new SageScanner(server, db);
                 DateTime start = new DateTime(anneeGlobal, moisDebut, 1);
                 DateTime end = new DateTime(anneeGlobal, moisFin, 1).AddMonths(1).AddDays(-1);
 

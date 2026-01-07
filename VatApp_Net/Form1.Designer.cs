@@ -12,6 +12,9 @@
 
         private void InitializeComponent()
         {
+            this.lblServer = new System.Windows.Forms.Label();
+            this.txtServer = new System.Windows.Forms.TextBox();
+            this.btnConnect = new System.Windows.Forms.Button();
             this.lblSoc = new System.Windows.Forms.Label();
             this.cmbSoc = new System.Windows.Forms.ComboBox();
             this.lblAnnee = new System.Windows.Forms.Label();
@@ -29,57 +32,73 @@
             ((System.ComponentModel.ISupportInitialize)(this.dgvDeductions)).BeginInit();
             this.SuspendLayout();
 
+            // lblServer
+            this.lblServer.Location = new System.Drawing.Point(20, 20);
+            this.lblServer.Size = new System.Drawing.Size(150, 23);
+            this.lblServer.Text = "Serveur SQL :";
+
+            // txtServer
+            this.txtServer.Location = new System.Drawing.Point(180, 20);
+            this.txtServer.Size = new System.Drawing.Size(200, 23);
+            this.txtServer.Text = @".\SAGE100";
+
+            // btnConnect
+            this.btnConnect.Location = new System.Drawing.Point(390, 19);
+            this.btnConnect.Size = new System.Drawing.Size(120, 25);
+            this.btnConnect.Text = "SE CONNECTER";
+            this.btnConnect.Click += new System.EventHandler(this.btnConnect_Click);
+
             // lblSoc
-            this.lblSoc.Location = new System.Drawing.Point(20, 20);
+            this.lblSoc.Location = new System.Drawing.Point(20, 60);
             this.lblSoc.Size = new System.Drawing.Size(150, 23);
             this.lblSoc.Text = "Société (Base SQL) :";
 
             // cmbSoc
             this.cmbSoc.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbSoc.Location = new System.Drawing.Point(180, 20);
+            this.cmbSoc.Location = new System.Drawing.Point(180, 60);
             this.cmbSoc.Size = new System.Drawing.Size(200, 23);
             this.cmbSoc.SelectedIndexChanged += new System.EventHandler(this.cmbSoc_SelectedIndexChanged);
 
             // lblAnnee
-            this.lblAnnee.Location = new System.Drawing.Point(20, 60);
+            this.lblAnnee.Location = new System.Drawing.Point(20, 100);
             this.lblAnnee.Size = new System.Drawing.Size(150, 23);
             this.lblAnnee.Text = "Année (ex: 2025) :";
 
             // txtAnnee
-            this.txtAnnee.Location = new System.Drawing.Point(180, 60);
+            this.txtAnnee.Location = new System.Drawing.Point(180, 100);
             this.txtAnnee.Size = new System.Drawing.Size(100, 23);
             this.txtAnnee.Text = DateTime.Now.Year.ToString();
 
             // lblPeriod
-            this.lblPeriod.Location = new System.Drawing.Point(20, 100);
+            this.lblPeriod.Location = new System.Drawing.Point(20, 140);
             this.lblPeriod.Size = new System.Drawing.Size(150, 23);
             this.lblPeriod.Text = "Mois ou Trimestre :";
 
             // txtPeriod
-            this.txtPeriod.Location = new System.Drawing.Point(180, 100);
+            this.txtPeriod.Location = new System.Drawing.Point(180, 140);
             this.txtPeriod.Size = new System.Drawing.Size(100, 23);
             this.txtPeriod.PlaceholderText = "ex: 3 ou 1-3";
 
             // lblIF
-            this.lblIF.Location = new System.Drawing.Point(400, 20);
+            this.lblIF.Location = new System.Drawing.Point(520, 60);
             this.lblIF.Size = new System.Drawing.Size(110, 23);
             this.lblIF.Text = "Identifiant Fiscal :";
 
             // txtIF
-            this.txtIF.Location = new System.Drawing.Point(520, 20);
+            this.txtIF.Location = new System.Drawing.Point(640, 60);
             this.txtIF.Size = new System.Drawing.Size(150, 23);
 
             // lblICE
-            this.lblICE.Location = new System.Drawing.Point(400, 60);
+            this.lblICE.Location = new System.Drawing.Point(520, 100);
             this.lblICE.Size = new System.Drawing.Size(110, 23);
             this.lblICE.Text = "ICE Société :";
 
             // txtICE
-            this.txtICE.Location = new System.Drawing.Point(520, 60);
+            this.txtICE.Location = new System.Drawing.Point(640, 100);
             this.txtICE.Size = new System.Drawing.Size(150, 23);
 
             // btnPreview
-            this.btnPreview.Location = new System.Drawing.Point(20, 140);
+            this.btnPreview.Location = new System.Drawing.Point(20, 180);
             this.btnPreview.Size = new System.Drawing.Size(260, 35);
             this.btnPreview.Text = "AFFICHER LE TABLEAU DE DEDUCTION";
             this.btnPreview.BackColor = System.Drawing.Color.SteelBlue;
@@ -91,13 +110,13 @@
             // dgvDeductions
             this.dgvDeductions.AllowUserToAddRows = false;
             this.dgvDeductions.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvDeductions.Location = new System.Drawing.Point(20, 185);
+            this.dgvDeductions.Location = new System.Drawing.Point(20, 225);
             this.dgvDeductions.Size = new System.Drawing.Size(760, 280);
             this.dgvDeductions.ReadOnly = true;
 
             // btnGenerate
             this.btnGenerate.Enabled = false;
-            this.btnGenerate.Location = new System.Drawing.Point(20, 475);
+            this.btnGenerate.Location = new System.Drawing.Point(20, 515);
             this.btnGenerate.Size = new System.Drawing.Size(760, 45);
             this.btnGenerate.Text = "LANCER LA GENERATION DU FICHIER XML (ZIP)";
             this.btnGenerate.BackColor = System.Drawing.Color.MediumSeaGreen;
@@ -107,14 +126,17 @@
             this.btnGenerate.Click += new System.EventHandler(this.btnGenerate_Click);
 
             // lblStatus
-            this.lblStatus.Location = new System.Drawing.Point(20, 525);
+            this.lblStatus.Location = new System.Drawing.Point(20, 565);
             this.lblStatus.Size = new System.Drawing.Size(760, 25);
-            this.lblStatus.Text = "Sélectionnez une société et une période, puis cliquez sur 'Afficher le tableau'.";
+            this.lblStatus.Text = "Saisissez le serveur SQL et cliquez sur 'Se Connecter'.";
             this.lblStatus.ForeColor = System.Drawing.Color.Gray;
 
             // Form1
             this.ClientSize = new System.Drawing.Size(950, 700);
             this.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.Controls.Add(this.lblServer);
+            this.Controls.Add(this.txtServer);
+            this.Controls.Add(this.btnConnect);
             this.Controls.Add(this.lblSoc);
             this.Controls.Add(this.cmbSoc);
             this.Controls.Add(this.lblAnnee);
@@ -137,6 +159,9 @@
             this.PerformLayout();
         }
 
+        private System.Windows.Forms.Label lblServer;
+        private System.Windows.Forms.TextBox txtServer;
+        private System.Windows.Forms.Button btnConnect;
         private System.Windows.Forms.Label lblSoc;
         private System.Windows.Forms.ComboBox cmbSoc;
         private System.Windows.Forms.Label lblAnnee;

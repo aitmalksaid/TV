@@ -1,0 +1,34 @@
+# .gitignore pour Visual Studio / .NET
+
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+## Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+## User-specific files
+*.suo
+*.user
+*.sqlproj.user
+
+## NuGet Packages
+*.nupkg
+**/packages/*
+!**/packages/build/
+
+## SQL Server files
+*.mdf
+*.ldf
+
+## Temporary files
+*.tmp
+*.bak
+
+## OS files
+.DS_Store
+Thumbs.db

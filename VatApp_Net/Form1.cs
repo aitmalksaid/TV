@@ -26,8 +26,44 @@ namespace VatApp_Net
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // On attend que l'utilisateur clique sur Se Connecter
-            lblStatus.Text = "Veuillez saisir le serveur SQL (ex: .\\SAGE100) et cliquer sur Se Connecter.";
+            lblStatus.Text = "Veuillez choisir ou saisir le serveur SQL, puis cliquer sur Se Connecter.";
+            // Chargement rapide des instances par défaut
+            cmbServer.Items.Clear();
+            cmbServer.Items.Add(@".\SAGE100");
+            cmbServer.Items.Add(@"(local)\SAGE100");
+            cmbServer.SelectedIndex = 0;
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                lblStatus.Text = "Recherche des instances SQL en cours...";
+                this.Cursor = Cursors.WaitCursor;
+                btnSearch.Enabled = false;
+
+                var current = cmbServer.Text;
+                var instances = SageScanner.GetLocalInstances();
+                
+                cmbServer.Items.Clear();
+                foreach (var inst in instances) cmbServer.Items.Add(inst);
+                
+                if (!string.IsNullOrEmpty(current) && !instances.Contains(current))
+                    cmbServer.Text = current;
+                else if (cmbServer.Items.Count > 0)
+                    cmbServer.SelectedIndex = 0;
+
+                lblStatus.Text = $"{instances.Count} instances potentielles trouvées.";
+            }
+            catch (Exception ex)
+            {
+                lblStatus.Text = "Erreur de recherche : " + ex.Message;
+            }
+            finally
+            {
+                this.Cursor = Cursors.Default;
+                btnSearch.Enabled = true;
+            }
         }
 
         private void btnConnect_Click(object sender, EventArgs e)
@@ -38,7 +74,7 @@ namespace VatApp_Net
                 lblStatus.ForeColor = Color.Blue;
                 this.Cursor = Cursors.WaitCursor;
 
-                string server = txtServer.Text.Trim();
+                string server = cmbServer.Text.Trim();
                 // On utilise une base temporaire 'master' juste pour lister les autres bases
                 scanner = new SageScanner(server, "master");
                 
@@ -119,7 +155,7 @@ namespace VatApp_Net
                 }
 
                 string db = cmbSoc.SelectedItem.ToString();
-                string server = txtServer.Text.Trim();
+                string server = cmbServer.Text.Trim();
                 var taskScanner = new SageScanner(server, db);
                 DateTime start = new DateTime(anneeGlobal, moisDebut, 1);
                 DateTime end = new DateTime(anneeGlobal, moisFin, 1).AddMonths(1).AddDays(-1);

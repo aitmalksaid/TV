@@ -13,7 +13,8 @@
         private void InitializeComponent()
         {
             this.lblServer = new System.Windows.Forms.Label();
-            this.txtServer = new System.Windows.Forms.TextBox();
+            this.cmbServer = new System.Windows.Forms.ComboBox();
+            this.btnSearch = new System.Windows.Forms.Button();
             this.btnConnect = new System.Windows.Forms.Button();
             this.lblSoc = new System.Windows.Forms.Label();
             this.cmbSoc = new System.Windows.Forms.ComboBox();
@@ -37,13 +38,20 @@
             this.lblServer.Size = new System.Drawing.Size(150, 23);
             this.lblServer.Text = "Serveur SQL :";
 
-            // txtServer
-            this.txtServer.Location = new System.Drawing.Point(180, 20);
-            this.txtServer.Size = new System.Drawing.Size(200, 23);
-            this.txtServer.Text = @".\SAGE100";
+            // cmbServer
+            this.cmbServer.Location = new System.Drawing.Point(180, 20);
+            this.cmbServer.Size = new System.Drawing.Size(200, 23);
+            this.cmbServer.Text = @".\SAGE100";
+            this.cmbServer.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown;
+
+            // btnSearch
+            this.btnSearch.Location = new System.Drawing.Point(390, 19);
+            this.btnSearch.Size = new System.Drawing.Size(100, 25);
+            this.btnSearch.Text = "RECHERCHER";
+            this.btnSearch.Click += new System.EventHandler(this.btnSearch_Click);
 
             // btnConnect
-            this.btnConnect.Location = new System.Drawing.Point(390, 19);
+            this.btnConnect.Location = new System.Drawing.Point(500, 19);
             this.btnConnect.Size = new System.Drawing.Size(120, 25);
             this.btnConnect.Text = "SE CONNECTER";
             this.btnConnect.Click += new System.EventHandler(this.btnConnect_Click);
@@ -135,7 +143,8 @@
             this.ClientSize = new System.Drawing.Size(950, 700);
             this.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.Controls.Add(this.lblServer);
-            this.Controls.Add(this.txtServer);
+            this.Controls.Add(this.cmbServer);
+            this.Controls.Add(this.btnSearch);
             this.Controls.Add(this.btnConnect);
             this.Controls.Add(this.lblSoc);
             this.Controls.Add(this.cmbSoc);
@@ -160,7 +169,8 @@
         }
 
         private System.Windows.Forms.Label lblServer;
-        private System.Windows.Forms.TextBox txtServer;
+        private System.Windows.Forms.ComboBox cmbServer;
+        private System.Windows.Forms.Button btnSearch;
         private System.Windows.Forms.Button btnConnect;
         private System.Windows.Forms.Label lblSoc;
         private System.Windows.Forms.ComboBox cmbSoc;

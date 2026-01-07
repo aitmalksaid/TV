@@ -165,5 +165,48 @@ namespace VatApp_Net
             if (journal.Contains("LCN") || journal.Contains("EFF")) return 4;
             return 5; // Autre
         }
+
+        public static List<string> GetLocalInstances()
+        {
+            var instances = new HashSet<string>();
+            instances.Add(@".\SAGE100");
+            instances.Add(@"(local)\SAGE100");
+            instances.Add(@"localhost\SAGE100");
+
+            try
+            {
+                // 1. Recherche dans le registre (Sage)
+                // On scanne plusieurs endroits possibles pour le serveur SQL de Sage
+                string[] registryPaths = {
+                    @"Software\Sage\Sage 100 SQL\Connexion",
+                    @"Software\Sage\Sage 100\SQL Server Name",
+                    @"Software\Sage\Sage 100\Connexion",
+                    @"Software\Sage\Common\SQLServer"
+                };
+
+                foreach (var path in registryPaths)
+                {
+                    using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(path))
+                    {
+                        if (key != null)
+                        {
+                            var server = key.GetValue("Server")?.ToString() ?? key.GetValue("")?.ToString();
+                            if (!string.IsNullOrEmpty(server)) instances.Add(server);
+                        }
+                    }
+                    using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(path))
+                    {
+                        if (key != null)
+                        {
+                            var server = key.GetValue("Server")?.ToString() ?? key.GetValue("")?.ToString();
+                            if (!string.IsNullOrEmpty(server)) instances.Add(server);
+                        }
+                    }
+                }
+            }
+            catch { /* Ignorer les erreurs de scan */ }
+
+            return new List<string>(instances);
+        }
     }
 }

@@ -29,6 +29,7 @@ namespace VatApp_Net
             lblStatus.Text = "Veuillez choisir ou saisir le serveur SQL, puis cliquer sur Se Connecter.";
             // Chargement rapide des instances par défaut
             cmbServer.Items.Clear();
+            cmbServer.Items.Add(@"DESKTOP-FSTIACU\SAG"); // Nouvelle instance
             cmbServer.Items.Add(@".\SAGE100");
             cmbServer.Items.Add(@"(local)\SAGE100");
             cmbServer.SelectedIndex = 0;
@@ -164,8 +165,33 @@ namespace VatApp_Net
 
                 if (currentDeductions.Count == 0)
                 {
-                    lblStatus.Text = "Aucune déduction trouvée.";
-                    lblStatus.ForeColor = Color.Orange;
+                    var diag = taskScanner.FetchDiagnostics(start, end);
+                    if (!string.IsNullOrEmpty(diag.errorInfo))
+                    {
+                        lblStatus.Text = "Erreur SQL : " + diag.errorInfo;
+                        lblStatus.ForeColor = Color.Red;
+                    }
+                    else if (diag.absoluteTotal == 0)
+                    {
+                        lblStatus.Text = "La base semble VIDE (0 écritures dans F_ECRITUREC).";
+                        lblStatus.ForeColor = Color.Red;
+                    }
+                    else if (diag.totalRaw == 0)
+                    {
+                        lblStatus.Text = $"Pas d'écritures de TVA trouvées sur la période (Total écritures base: {diag.absoluteTotal}).";
+                        lblStatus.ForeColor = Color.Orange;
+                    }
+                    else if (diag.totalLettered == 0)
+                    {
+                        lblStatus.Text = $"Trouvé {diag.totalRaw} factures, mais AUCUNE n'est LETTRÉE dans Sage.";
+                        lblStatus.ForeColor = Color.Orange;
+                        MessageBox.Show($"Important : J'ai trouvé {diag.totalRaw} écritures d'achats sur la période, mais aucune n'est lettrée (associée à un règlement).\n\nLe relevé de déduction TVA ne peut extraire que les factures payées et lettrées dans Sage.", "Données non lettrées", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        lblStatus.Text = $"Trouvé {diag.totalLettered} factures lettrées, mais aucune ne correspond aux critères de TVA.";
+                        lblStatus.ForeColor = Color.Orange;
+                    }
                     return;
                 }
 

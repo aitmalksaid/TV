@@ -14,7 +14,8 @@ namespace VatApp_Net
         public SageScanner(string server, string db)
         {
             _dbName = db;
-            _connectionString = $"Server={server};Database={db};Integrated Security=True;TrustServerCertificate=True;";
+            // Ajout de Encrypt=False pour la compatibilité avec SQL 2008 R2 (qui ne supporte pas toujours le cryptage forcé par les nouvelles versions de .NET)
+            _connectionString = $"Server={server};Database={db};Integrated Security=True;TrustServerCertificate=True;Encrypt=False;";
         }
 
         public List<string> GetDatabases()
@@ -35,29 +36,35 @@ namespace VatApp_Net
 
         public (string IFSoc, string ICESoc) GetVatConfig(string db)
         {
+            String ifSoc = "", iceSoc = "";
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                // 1. Chercher dans T_VAT_CONFIG
-                var sql = "SELECT IdentifiantFiscal, ICE FROM T_VAT_CONFIG WHERE DBName = @db";
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@db", db);
+                
+                // 1. Chercher dans T_VAT_CONFIG (On peut être sur 'master', donc on ignore si la table manque)
+                try {
+                    var sql1 = "SELECT IdentifiantFiscal, ICE FROM T_VAT_CONFIG WHERE DBName = @db";
+                    using (var cmd = new SqlCommand(sql1, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@db", db);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                                return (reader["IdentifiantFiscal"].ToString().Trim(), reader["ICE"].ToString().Trim());
+                        }
+                    }
+                } catch { /* Table manquante ou autre erreur, on continue */ }
+
+                // 2. Sinon chercher dans P_DOSSIER de la base cible
+                try {
+                    var sql2 = $"SELECT D_Identifiant, D_Siret FROM [{db}].dbo.P_DOSSIER";
+                    using (var cmd = new SqlCommand(sql2, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
-                            return (reader["IdentifiantFiscal"].ToString(), reader["ICE"].ToString());
+                            return (reader["D_Identifiant"].ToString().Trim(), reader["D_Siret"].ToString().Trim());
                     }
-                }
-
-                // 2. Sinon chercher dans P_DOSSIER
-                sql = $"SELECT D_Identifiant, D_Siret FROM [{db}].dbo.P_DOSSIER";
-                using (var cmd = new SqlCommand(sql, conn))
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                        return (reader["D_Identifiant"].ToString(), reader["D_Siret"].ToString());
-                }
+                } catch { /* Base non Sage ou autre erreur */ }
             }
             return ("", "");
         }
@@ -82,22 +89,52 @@ namespace VatApp_Net
             }
         }
 
+        public (int totalRaw, int totalLettered, string errorInfo, int absoluteTotal) FetchDiagnostics(DateTime start, DateTime end)
+        {
+            int raw = 0, lettered = 0, absTotal = 0;
+            string error = "";
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    // Diagnostic plus complet
+                    var sql = $@"
+                        SELECT 
+                            (SELECT COUNT(*) FROM F_ECRITUREC) as AbsoluteTotal,
+                            (SELECT COUNT(DISTINCT EC_Piece) FROM F_ECRITUREC WHERE EC_Date BETWEEN @start AND @end AND (CG_Num LIKE '6%' OR CG_Num LIKE '345%' OR CG_Num LIKE '445%' OR CG_Num LIKE '442%')) as TotalRaw,
+                            (SELECT COUNT(DISTINCT CASE WHEN EC_Lettrage <> '' AND EC_Lettrage IS NOT NULL THEN EC_Piece END) FROM F_ECRITUREC WHERE EC_Date BETWEEN @start AND @end AND (CG_Num LIKE '6%' OR CG_Num LIKE '345%' OR CG_Num LIKE '445%' OR CG_Num LIKE '442%')) as TotalLettered";
+                    
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@start", start);
+                        cmd.Parameters.AddWithValue("@end", end);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                absTotal = Convert.ToInt32(reader["AbsoluteTotal"]);
+                                raw = Convert.ToInt32(reader["TotalRaw"]);
+                                lettered = Convert.ToInt32(reader["TotalLettered"]);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { error = ex.Message; }
+            return (raw, lettered, error, absTotal);
+        }
+
         public List<Deduction> GetDeductions(DateTime start, DateTime end)
         {
             var list = new List<Deduction>();
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
+                
+                // Requête robuste compatible avec plusieurs versions de Sage
+                // On simplifie les jointures pour éviter les problèmes de CTE complexes sur les vieux SQL Server
                 var sql = @"
-                    WITH InvoiceAmounts AS (
-                        SELECT 
-                            EC_Piece, 
-                            EC_Date,
-                            SUM(CASE WHEN CG_Num LIKE '6%' THEN EC_Montant ELSE 0 END) as HT,
-                            SUM(CASE WHEN (CG_Num LIKE '345%' OR CG_Num LIKE '445%') THEN EC_Montant ELSE 0 END) as TVA
-                        FROM F_ECRITUREC 
-                        GROUP BY EC_Piece, EC_Date
-                    )
                     SELECT 
                         f_inv.EC_Piece, 
                         f_inv.EC_Date AS DateFacture, 
@@ -108,18 +145,19 @@ namespace VatApp_Net
                         t.CT_Siret AS ICE_Fournisseur,
                         f_inv.CT_Num,
                         f_inv.EC_Reference,
-                        ia.HT,
-                        ia.TVA
+                        (SELECT SUM(CASE WHEN CG_Num LIKE '6%' THEN EC_Montant ELSE 0 END) 
+                         FROM F_ECRITUREC WHERE EC_Piece = f_inv.EC_Piece AND EC_Date = f_inv.EC_Date) as HT,
+                        (SELECT SUM(CASE WHEN (CG_Num LIKE '345%' OR CG_Num LIKE '445%') THEN EC_Montant ELSE 0 END) 
+                         FROM F_ECRITUREC WHERE EC_Piece = f_inv.EC_Piece AND EC_Date = f_inv.EC_Date) as TVA
                     FROM F_ECRITUREC f_inv
                     JOIN F_ECRITUREC f_pay ON f_inv.EC_Lettrage = f_pay.EC_Lettrage AND f_inv.CT_Num = f_pay.CT_Num
                     JOIN F_COMPTET t ON f_inv.CT_Num = t.CT_Num
-                    LEFT JOIN InvoiceAmounts ia ON f_inv.EC_Piece = ia.EC_Piece AND f_inv.EC_Date = ia.EC_Date
-                    WHERE f_inv.EC_Lettre <> '' 
-                    AND f_inv.EC_Sens = 1 
-                    AND f_pay.EC_Sens = 0
-                    AND t.CT_Type = 1 -- Fournisseurs uniquement
-                    AND f_pay.EC_Date BETWEEN @start AND @end 
-                    AND f_inv.EC_Lettrage <> ''";
+                    WHERE f_inv.EC_Lettrage <> '' 
+                    AND f_inv.EC_Lettrage IS NOT NULL
+                    AND f_inv.EC_Sens = 1 -- Crédit (Facture)
+                    AND f_pay.EC_Sens = 0 -- Débit (Paiement)
+                    AND t.CT_Type = 1    -- Fournisseurs uniquement
+                    AND f_pay.EC_Date BETWEEN @start AND @end";
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
@@ -140,9 +178,9 @@ namespace VatApp_Net
                                 NomFournisseur = reader["NomFournisseur"].ToString(),
                                 DateFacture = Convert.ToDateTime(reader["DateFacture"]),
                                 DatePaiement = Convert.ToDateTime(reader["DatePaiement"]),
-                                ReferenceEcriture = reader["EC_Reference"].ToString(),
-                                IF_Fournisseur = reader["IF_Fournisseur"].ToString(),
-                                ICE_Fournisseur = reader["ICE_Fournisseur"].ToString(),
+                                ReferenceEcriture = reader["EC_Reference"]?.ToString() ?? "",
+                                IF_Fournisseur = reader["IF_Fournisseur"]?.ToString() ?? "",
+                                ICE_Fournisseur = reader["ICE_Fournisseur"]?.ToString() ?? "",
                                 ModePaiement = MapModePaiement(reader["JournalPaiement"].ToString()),
                                 MontantHT = ht,
                                 MontantTva = tva,
